@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "cfgfile.h"
 #include "logger.h"
 #include "spnavd.h"
@@ -30,6 +31,9 @@ enum {TX, TY, TZ, RX, RY, RZ};
 
 static const int def_axmap[] = {0, 2, 1, 3, 5, 4};
 static const int def_axinv[] = {0, 1, 1, 0, 1, 1};
+
+#define DEFAULT_SOCK_NAME "/var/run/spnav.sock"
+#define DEFAULT_PIDFILE "/var/run/spnav.pid"
 
 void default_cfg(struct cfg *cfg)
 {
@@ -66,6 +70,27 @@ void default_cfg(struct cfg *cfg)
 		cfg->devname[i] = 0;
 		cfg->devid[i][0] = cfg->devid[i][1] = -1;
 	}
+
+    strncpy(cfg->sock_name, DEFAULT_SOCK_NAME, PATH_MAX-1);
+    strncpy(cfg->pidfile, DEFAULT_PIDFILE, PATH_MAX-1);
+    cfg->sock_name[PATH_MAX-1] = 0;
+    cfg->pidfile[PATH_MAX-1] = 0;
+}
+
+/* result will remain untouched if resolving fails; this assume result has space for PATH_MAX chars */
+void resolve_path(char *result, char *val) {
+    if(val[0] == '/') { /* Assume val is an absolute path */
+        strncpy(result, val, PATH_MAX-1);
+    }
+    else { /* Assume val is a relative path; note that realpath won't do, because val need not exist in the filesystem yet */
+        char buf[PATH_MAX];
+        if (!getcwd(buf, PATH_MAX)) {
+            return;
+        } else {
+            snprintf(result, PATH_MAX, "%s/%s", buf, val);
+        }
+    }
+    result[PATH_MAX-1] = 0;
 }
 
 #define EXPECT(cond) \
@@ -312,7 +337,10 @@ int read_cfg(const char *fname, struct cfg *cfg)
 				logmsg(LOG_WARNING, "invalid configuration value for %s, expected a vendorid:productid pair\n", key_str);
 				continue;
 			}
-
+        } else if(strcmp(key_str, "sock_name") == 0) {
+            resolve_path(cfg->sock_name, val_str);
+        } else if(strcmp(key_str, "pidfile") == 0) {
+            resolve_path(cfg->pidfile, val_str);
 		} else {
 			logmsg(LOG_WARNING, "unrecognized config option: %s\n", key_str);
 		}

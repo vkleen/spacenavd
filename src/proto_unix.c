@@ -49,16 +49,16 @@ int init_unix(void)
 		return -1;
 	}
 
-	unlink(SOCK_NAME);	/* in case it already exists */
+	unlink(cfg.sock_name);	/* in case it already exists */
 
 	memset(&addr, 0, sizeof addr);
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, SOCK_NAME);
+	strcpy(addr.sun_path, cfg.sock_name);
 
 	prev_umask = umask(0);
 
 	if(bind(s, (struct sockaddr*)&addr, sizeof addr) == -1) {
-		logmsg(LOG_ERR, "failed to bind unix socket: %s: %s\n", SOCK_NAME, strerror(errno));
+		logmsg(LOG_ERR, "failed to bind unix socket: %s: %s\n", cfg.sock_name, strerror(errno));
 		close(s);
 		return -1;
 	}
@@ -68,7 +68,7 @@ int init_unix(void)
 	if(listen(s, 8) == -1) {
 		logmsg(LOG_ERR, "listen failed: %s\n", strerror(errno));
 		close(s);
-		unlink(SOCK_NAME);
+		unlink(cfg.sock_name);
 		return -1;
 	}
 
@@ -82,7 +82,7 @@ void close_unix(void)
 		close(lsock);
 		lsock = -1;
 
-		unlink(SOCK_NAME);
+		unlink(cfg.sock_name);
 	}
 }
 

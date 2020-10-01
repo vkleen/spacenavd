@@ -257,7 +257,7 @@ static void cleanup(void)
 		remove_device(tmp);
 	}
 
-	remove(PIDFILE);
+	remove(cfg.pidfile);
 }
 
 static void daemonize(void)
@@ -301,7 +301,7 @@ static int write_pid_file(void)
 	FILE *fp;
 	int pid = getpid();
 
-	if(!(fp = fopen(PIDFILE, "w"))) {
+	if(!(fp = fopen(cfg.pidfile, "w"))) {
 		return -1;
 	}
 	fprintf(fp, "%d\n", pid);
@@ -316,7 +316,7 @@ static int find_running_daemon(void)
 	struct sockaddr_un addr;
 
 	/* try to open the pid-file */
-	if(!(fp = fopen(PIDFILE, "r"))) {
+	if(!(fp = fopen(cfg.pidfile, "r"))) {
 		return -1;
 	}
 	if(fscanf(fp, "%d\n", &pid) != 1) {
@@ -331,7 +331,7 @@ static int find_running_daemon(void)
 	}
 	memset(&addr, 0, sizeof addr);
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, SOCK_NAME, sizeof addr.sun_path);
+	strncpy(addr.sun_path, cfg.sock_name, sizeof addr.sun_path);
 
 	if(connect(s, (struct sockaddr*)&addr, sizeof addr) == -1) {
 		close(s);
